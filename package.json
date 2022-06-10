@@ -11,8 +11,11 @@
   },
   "dependencies": {
     "@vueuse/core": "^8.6.0",
+    "sass": "^1.52.3",
     "vue": "^3.2.36",
-    "vue-router": "^4.0.15"
+    "vue-router": "^4.0.15",
+    "vue-smooth-dnd": "^0.8.1",
+    "vuedraggable": "^2.24.3"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^0.25.1",
