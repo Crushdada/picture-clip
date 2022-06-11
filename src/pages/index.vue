@@ -22,16 +22,14 @@ function isMultiplePics(arg: any) {
 }
 function getBK(item: string | Array<string>) {
   // 如果是单张
-  if (!isMultiplePics(item)) {
-    return `url(${item})`;
-  } else {
-    const picUrlList = item.reduce((seq, url, idx) => {
-      seq += `url(${url})`;
-      if (idx !== item.length - 1) seq += ",";
-      return seq;
-    }, "");
-    return picUrlList;
-  }
+  if (!isMultiplePics(item)) return `url(${item})`;
+  // 一键拖入多张图片的逻辑
+  const picUrlList = (item as Array<string>).reduce((seq, url, idx) => {
+    seq += `url(${url})`;
+    if (idx !== item.length - 1) seq += ",";
+    return seq;
+  }, "");
+  return picUrlList;
 }
 function getTrackItemClass(trackPicIdx: number) {
   return trackPicIdx === activeTrackPicIndex.value
@@ -42,33 +40,26 @@ function dragstart(index: number, flag = false) {
   dragIndex.value = index;
   isExternalDrag.value = flag;
 }
-function dragInsert() {
-  if (isExternalDrag.value) {
-    const source = picList.value[dragIndex.value];
-    pathWay.value.push(source);
-    dragIndex.value = pathWay.value.length - 1;
-    useToggle(isExternalDrag);
-  }
-}
+
 function setActivePic(idx: number) {
   activeTrackPicIndex.value = idx;
 }
 function dragenter(e: any, index: number) {
   e.preventDefault();
   // 避免源对象触发自身的dragenter事件
-  if (dragIndex.value !== index) {
-    if (!isExternalDrag.value) {
+  if (!isExternalDrag.value) {
+    if (dragIndex.value !== index) {
       const source = pathWay.value[dragIndex.value];
       pathWay.value.splice(dragIndex.value, 1);
       pathWay.value.splice(index, 0, source);
       // 排序变化后目标对象的索引变成源对象的索引
       dragIndex.value = index;
-    } else {
-      const source = picList.value[dragIndex.value];
-      pathWay.value.splice(index, 0, source);
-      dragIndex.value = index;
-      isExternalDrag.value = false;
     }
+  } else {
+    const source = picList.value[dragIndex.value];
+    pathWay.value.splice(index, 0, source);
+    dragIndex.value = index;
+    isExternalDrag.value = false;
   }
 }
 function dragover(e: any, index: number) {
@@ -112,7 +103,6 @@ function dragover(e: any, index: number) {
       overflow-x-auto
       name="drag"
       tag="div"
-      @dragenter.self="dragInsert()"
     >
       <template v-for="(pic, idx) in pathWay" :key="pic">
         <div
@@ -164,6 +154,12 @@ function dragover(e: any, index: number) {
           @click="setActivePic(idx)"
         />
       </template>
+      <div
+        h-30
+        flex-grow
+        :key="1"
+        @dragenter="dragenter($event, pathWay.length)"
+      ></div>
     </transition-group>
   </div>
 </template>
