@@ -17,6 +17,15 @@ const pathWay = ref([]) as unknown as any;
 const dragIndex = ref(0);
 const isExternalDrag = ref(false);
 const activeTrackPicIndex = ref(0);
+
+onMounted(() => {
+  // Shim: Can not trigger the event by Key Aliases 'delete' or 'backspace'.
+  document.body.addEventListener("keyup", (e) => {
+    if (e.key === "Backspace" || e.key === "Delete")
+      pathWay.value.splice(activeTrackPicIndex.value, 1);
+    activeTrackPicIndex.value = -1;
+  });
+});
 function isMultiplePics(arg: any) {
   return !(typeof arg === "string");
 }
@@ -40,7 +49,6 @@ function dragstart(index: number, flag = false) {
   dragIndex.value = index;
   isExternalDrag.value = flag;
 }
-
 function setActivePic(idx: number) {
   activeTrackPicIndex.value = idx;
 }
@@ -48,18 +56,22 @@ function dragenter(e: any, index: number) {
   e.preventDefault();
   // 避免源对象触发自身的dragenter事件
   if (!isExternalDrag.value) {
+    // 内部拖拽排序逻辑
     if (dragIndex.value !== index) {
       const source = pathWay.value[dragIndex.value];
       pathWay.value.splice(dragIndex.value, 1);
       pathWay.value.splice(index, 0, source);
       // 排序变化后目标对象的索引变成源对象的索引
       dragIndex.value = index;
+      activeTrackPicIndex.value = index;
     }
   } else {
+    // 外部拖拽插入轨道
     const source = picList.value[dragIndex.value];
     pathWay.value.splice(index, 0, source);
     dragIndex.value = index;
     isExternalDrag.value = false;
+    activeTrackPicIndex.value = index;
   }
 }
 function dragover(e: any, index: number) {
