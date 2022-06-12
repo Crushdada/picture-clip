@@ -5,7 +5,7 @@
   A similar image clipping tool. 
 </h5>
 
-![image](https://user-images.githubusercontent.com/73060999/173248691-0a3a639d-3e8e-4849-8ae0-b388756976af.png)
+<image style="width:400px;height:300px;" src="https://user-images.githubusercontent.com/73060999/173248691-0a3a639d-3e8e-4849-8ae0-b388756976af.png" />
 
 <h5>
   支持: 拖拽排序和使用canvas剪切图片
