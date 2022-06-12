@@ -17,6 +17,8 @@ const pathWay = ref([]) as unknown as any;
 const dragIndex = ref(0);
 const isExternalDrag = ref(false);
 const activeTrackPicIndex = ref(0);
+const pointerX = ref(0);
+// const pointerY = ref(0);
 
 onMounted(() => {
   // Shim: Can not trigger the event by Key Aliases 'delete' or 'backspace'.
@@ -49,7 +51,8 @@ function dragstart(index: number, flag = false) {
   dragIndex.value = index;
   isExternalDrag.value = flag;
 }
-function setActivePic(idx: number) {
+function setActivePic(e: any, idx: number) {
+  pointerX.value = e.layerX;
   activeTrackPicIndex.value = idx;
 }
 function dragenter(e: any, index: number) {
@@ -102,77 +105,105 @@ function dragover(e: any, index: number) {
         @dragstart="dragstart(idx, true)"
       />
     </div>
-    <!-- 轨道 -->
-    <p text-left>++++++++++++++++++++++++++++++</p>
-    <transition-group
-      id="wrap"
-      h-38
-      flex
-      items-center
-      border="1 gray-500/40"
-      shadow-md
-      flex-nowrap
-      overflow-x-auto
-      name="drag"
-      tag="div"
-    >
-      <template v-for="(pic, idx) in pathWay" :key="pic">
+    <div mt-20 overflow-y-visible relative>
+      <!-- 刻度指针 -->
+      <div
+        btn
+        absolute
+        :style="{
+          top: '-32px',
+          left: `${pointerX || 30}px`,
+          transform: 'translateX(-50%)',
+          transition: 'all ease-out 0.3s',
+        }"
+      >
+        Cut
+      </div>
+      <!-- 轨道 -->
+      <transition-group
+        id="wrap"
+        relative
+        h-38
+        flex
+        items-center
+        border="1 gray-500/40"
+        shadow-md
+        flex-nowrap
+        overflow-x-auto
+        name="drag"
+        tag="div"
+      >
+        <!-- 分割线 -->
         <div
-          v-if="isMultiplePics(pic)"
-          cursor-move
-          flex
-          flex-nowrap
-          draggable="true"
-          :class="getTrackItemClass(idx)"
-          @dragenter="dragenter($event, idx)"
-          @dragover="dragover($event, idx)"
-          @dragstart="dragstart(idx)"
-          @click="setActivePic(idx)"
-        >
+          :key="2"
+          absolute
+          scale-x-50
+          z-1
+          w-1px
+          h-full
+          :style="{
+            left: `${pointerX}px`,
+            'background-color': '#00fff7',
+          }"
+        ></div>
+        <template v-for="(pic, idx) in pathWay" :key="pic">
           <div
-            v-for="(item, idx2) in pic"
-            :key="idx2"
+            v-if="isMultiplePics(pic)"
+            cursor-move
+            flex
+            flex-nowrap
+            draggable="true"
+            :class="getTrackItemClass(idx)"
+            @dragenter="dragenter($event, idx)"
+            @dragover="dragover($event, idx)"
+            @dragstart="dragstart(idx)"
+            @click="setActivePic($event, idx)"
+          >
+            <div
+              v-for="(item, idx2) in pic"
+              :key="idx2"
+              w-50
+              h-30
+              :style="{
+                backgroundImage: getBK(item),
+                backgroundSize: 'cover',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
+              }"
+            />
+          </div>
+          <div
+            v-else
             w-50
             h-30
+            border-emerald
+            shadow-md
+            cursor-move
+            inline-block
+            flex-grow-0
+            flex-shrink-0
+            :class="getTrackItemClass(idx)"
             :style="{
-              backgroundImage: getBK(item),
+              backgroundImage: getBK(pic),
               backgroundSize: 'cover',
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'center',
             }"
+            draggable="true"
+            @dragenter="dragenter($event, idx)"
+            @dragover="dragover($event, idx)"
+            @dragstart="dragstart(idx)"
+            @click="setActivePic($event, idx)"
           />
-        </div>
+        </template>
         <div
-          v-else
-          w-50
           h-30
-          border-emerald
-          shadow-md
-          cursor-move
-          inline-block
-          flex-grow-0
-          flex-shrink-0
-          :class="getTrackItemClass(idx)"
-          :style="{
-            backgroundImage: getBK(pic),
-            backgroundSize: 'cover',
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center',
-          }"
-          draggable="true"
-          @dragenter="dragenter($event, idx)"
-          @dragover="dragover($event, idx)"
-          @dragstart="dragstart(idx)"
-          @click="setActivePic(idx)"
-        />
-      </template>
-      <div
-        h-30
-        flex-grow
-        :key="1"
-        @dragenter="dragenter($event, pathWay.length)"
-      ></div>
-    </transition-group>
+          flex-grow
+          :key="1"
+          @dragenter="dragenter($event, pathWay.length)"
+        ></div>
+      </transition-group>
+    </div>
   </div>
 </template>
 
