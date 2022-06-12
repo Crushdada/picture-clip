@@ -118,39 +118,60 @@ async function formatImgSize(imgUrl: string) {
 }
 // 剪切逻辑
 async function cutImage() {
-  const { url, trackItemWidth } = pathWay.value[activeTrackPicIndex.value];
+  const source = pathWay.value[activeTrackPicIndex.value];
   const img = new Image();
-  img.src = url;
+  img.src = source.url;
   const item = document.getElementsByClassName("trackItem");
   const domX = item[activeTrackPicIndex.value].getClientRects()[0].x;
-  const img1Width = clientX.value - domX;
-  const cutWidth = (img1Width / trackItemWidth) * img.width;
+  // calc sw,sh
+  const img1Width = clientX.value - domX; // 在轨道中显示的宽度
+  const img2Width = source.trackItemWidth - img1Width;
+  const cutWidth1 = (img1Width / source.trackItemWidth) * img.width; // 实际应当剪切的左半部分宽度
+  const cutWidth2 = (img2Width / source.trackItemWidth) * img.width; // 右半部分宽度
   const cutHeight = img.height;
-  // 创建 canvas 节点并初始化
+  // canvas
   const canvas = document.createElement("canvas");
   canvas.width = img1Width;
   canvas.height = trackImgHeight;
   const context = canvas.getContext("2d")!;
-  // 跨域
   img.crossOrigin = "Anonymous";
-  const base64Url = await new Promise((res, rej) => {
+  // drawImage & generate imgUrl
+  const [leftImg, rightImg] = await new Promise((res, rej) => {
     img.onload = () => {
       context.drawImage(
         img,
         0,
         0,
-        cutWidth,
+        cutWidth1,
         cutHeight,
         0,
         0,
         img1Width,
         trackImgHeight
       );
-      const base64 = canvas.toDataURL("image/png");
-      res(base64);
+      const imgL = canvas.toDataURL("image/png");
+      canvas.width = img2Width;
+      context.drawImage(
+        img,
+        cutWidth1,
+        0,
+        cutWidth2,
+        cutHeight,
+        0,
+        0,
+        img2Width,
+        trackImgHeight
+      );
+      const imgR = canvas.toDataURL("image/png");
+      res([imgL, imgR]);
     };
   });
-  console.log(base64Url);
+  source.url = leftImg;
+  source.trackItemWidth = img1Width;
+  pathWay.value.splice(activeTrackPicIndex.value + 1, 0, {
+    url: rightImg,
+    trackItemWidth: img2Width,
+  });
 }
 // 拖拽逻辑
 function dragstart(index: number, flag = false) {
