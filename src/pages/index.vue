@@ -36,15 +36,15 @@ const picList = ref([
     ],
     trackItemWidth: 3,
   },
-]);
-const pathWay = ref([]) as unknown as any;
-const trackImgWidth = 200;
-const trackImgHeight = 120;
-const dragIndex = ref(0);
-const isExternalDrag = ref(false);
-const activeTrackPicIndex = ref(0);
-const pointerX = ref(0);
-
+]); // 图片列表
+const pathWay = ref([]) as unknown as any; // 轨道
+const trackImgWidth = 200; // 轨道上图片的默认高度
+const trackImgHeight = 120; // 轨道上单张图片的默认长度
+const dragIndex = ref(0); // 当前拖拽的图片的索引
+const isExternalDrag = ref(false); // 当前是否外部拖拽
+const activeTrackPicIndex = ref(0); // 当前激活的轨道图片索引
+const pointerX = ref(0); // 指针相对wrap的x坐标
+const clientX = ref(0); // 指针相对视窗的x坐标
 onMounted(() => {
   // Shim: Can not trigger the event by Key Aliases 'delete' or 'backspace'.
   document.body.addEventListener("keyup", (e) => {
@@ -67,23 +67,23 @@ function getTrackItemClass(trackPicIdx: number) {
 }
 function setActivePic(e: any, idx: number) {
   pointerX.value = e.layerX;
+  clientX.value = e.clientX;
   activeTrackPicIndex.value = idx;
 }
 function mergeImgsRow(list: Array<string>, cwith: number, cheight: number) {
   return new Promise((resolve, reject) => {
-    const baseList = [];
+    const baseList = [] as any;
     // 创建 canvas 节点并初始化
     const canvas = document.createElement("canvas");
     canvas.width = cwith * list.length;
     canvas.height = cheight;
-    const context = canvas.getContext("2d");
+    const context = canvas.getContext("2d")!;
 
     list.map((item, index) => {
       const img = new Image();
       img.src = item;
       // 跨域
       img.crossOrigin = "Anonymous";
-
       img.onload = () => {
         context.drawImage(img, cwith * index, 0, cwith, cheight);
         const base64 = canvas.toDataURL("image/png");
@@ -96,13 +96,61 @@ function mergeImgsRow(list: Array<string>, cwith: number, cheight: number) {
     });
   });
 }
+// 格式化图片，使其尺寸符合规定的轨道图片尺寸
+async function formatImgSize(imgUrl: string) {
+  const img = new Image();
+  img.src = imgUrl;
+  // 创建 canvas 节点并初始化
+  const canvas = document.createElement("canvas");
+  canvas.width = trackImgWidth;
+  canvas.height = trackImgHeight;
+  const context = canvas.getContext("2d")!;
+  // 跨域
+  img.crossOrigin = "Anonymous";
+  const base64Url = await new Promise((res, rej) => {
+    img.onload = () => {
+      context.drawImage(img, 0, 0, trackImgWidth, trackImgHeight);
+      const base64 = canvas.toDataURL("image/png");
+      res(base64);
+    };
+  });
+  return base64Url;
+}
 // 剪切逻辑
 async function cutImage() {
-  const source = pathWay.value[activeTrackPicIndex.value];
-  if (isMultiplePics(source)) {
-    const imgUrl = await mergeImgsRow(source, trackImgWidth, trackImgHeight);
-    pathWay.value[activeTrackPicIndex.value] = imgUrl;
-  }
+  const { url, trackItemWidth } = pathWay.value[activeTrackPicIndex.value];
+  const img = new Image();
+  img.src = url;
+  const item = document.getElementsByClassName("trackItem");
+  const domX = item[activeTrackPicIndex.value].getClientRects()[0].x;
+  const img1Width = clientX.value - domX;
+  const cutWidth = (img1Width / trackItemWidth) * img.width;
+  const cutHeight = img.height;
+  // 创建 canvas 节点并初始化
+  const canvas = document.createElement("canvas");
+  canvas.width = img1Width;
+  canvas.height = trackImgHeight;
+  const context = canvas.getContext("2d")!;
+  // 跨域
+  img.crossOrigin = "Anonymous";
+  const base64Url = await new Promise((res, rej) => {
+    img.onload = () => {
+      context.drawImage(
+        img,
+        0,
+        0,
+        cutWidth,
+        cutHeight,
+        0,
+        0,
+        img1Width,
+        trackImgHeight
+      );
+      const base64 = canvas.toDataURL("image/png");
+      res(base64);
+    };
+  });
+  console.log(base64Url);
 }
 // 拖拽逻辑
 function dragstart(index: number, flag = false) {
@@ -125,22 +173,25 @@ async function dragenter(e: any, index: number) {
   } else {
     // 外部拖拽插入轨道
     const source = picList.value[dragIndex.value];
+    const { url, trackItemWidth } = source;
     // 多张图片的插入逻辑
     if (isMultiplePics(source)) {
       // canvas拼接多张图片为一张
       const mergedSource = await mergeImgsRow(
-        source.url as Array<string>,
+        url as Array<string>,
         trackImgWidth,
         trackImgHeight
       );
       pathWay.value.splice(index, 0, {
         url: mergedSource,
-        trackItemWidth: source.trackItemWidth * trackImgWidth,
+        trackItemWidth: trackItemWidth * trackImgWidth,
       });
     } else {
+      // 使用canvas修改图片到指定大小
+      const formatedImgUrl = await formatImgSize(url as string);
       pathWay.value.splice(index, 0, {
-        url: source.url,
-        trackItemWidth: source.trackItemWidth * trackImgWidth,
+        url: formatedImgUrl,
+        trackItemWidth: trackItemWidth * trackImgWidth,
       });
     }
     dragIndex.value = index;
@@ -226,6 +277,7 @@ function dragover(e: any, index: number) {
             inline-block
             flex-grow-0
             flex-shrink-0
+            class="trackItem"
             :class="getTrackItemClass(idx)"
             :style="{
               width: `${trackItem.trackItemWidth}px`,
